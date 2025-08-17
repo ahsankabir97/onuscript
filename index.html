@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>OLT Script Generator</title>
+<style>
+  :root{
+    --accent:#2b7be9;
+    --card:#0f1b36;
+    --bg:#071022;
+    --text:#e9f0ff;
+    --muted:#9fb0ff66;
+    --panel:#0b1630;
+    --glass: rgba(255,255,255,0.03);
+    --radius:14px;
+  }
+  /* light mode vars */
+  body.light { --card:#ffffff; --bg:#eaf4ff; --text:#071322; --muted:#4b5563aa; --panel:#ffffff; --glass: rgba(10,20,40,0.03); --accent:#2468d9; }
+
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg,var(--bg),#0b1830 40%); color:var(--text); -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1100px;margin:28px auto;padding:20px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  h1{font-size:20px;margin:0;font-weight:700}
+  .subtitle{font-size:13px;opacity:.9;margin-top:4px;color:var(--muted)}
+
+  .card{background:linear-gradient(180deg,var(--card),#07132a);border-radius:var(--radius);box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
+  body.light .card{box-shadow: 0 8px 28px rgba(12,20,40,0.06); border:1px solid rgba(16,24,40,0.05)}
+
+  .grid{display:grid;gap:18px;padding:18px}
+  @media(min-width:960px){ .grid{grid-template-columns:1fr 1fr} }
+
+  label{display:block;font-size:13px;margin-bottom:6px;font-weight:600;color:var(--muted)}
+  input,select,textarea{font-family:inherit;font-size:14px}
+  .field{margin-bottom:12px}
+  input[type="number"], input[type="text"], select{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background:var(--glass); color:var(--text);
+    outline:none; transition:box-shadow .15s, border-color .15s;
+  }
+  body.light input, body.light select { border:1px solid rgba(16,24,40,0.06); background: #fff; color:var(--text) }
+
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+  textarea{width:100%; min-height:420px; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.04); background:#020618; color:#dff0ff; resize:vertical; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:13px; line-height:1.45}
+  body.light textarea { background:#f8fbff; color:#042030 }
+
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  button{padding:9px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:700}
+  .btn-primary{background:linear-gradient(180deg,var(--accent),#1a5fd6); color:#fff}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
+  .btn-danger{background:linear-gradient(180deg,#ff8a00,#ff5e00);color:#fff}
+
+  .row-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+  .hint{font-size:13px;color:var(--muted)}
+
+  #modeToggle{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer}
+  .topbar-right{display:flex;gap:12px;align-items:center}
+
+  footer{max-width:1100px;margin:18px auto;color:var(--muted);font-size:13px;text-align:center}
+  a.link{color:var(--accent);text-decoration:none;font-weight:700}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>OLT Script Generator</h1>
+        <div class="subtitle">Generate config snippets for common OLT vendors (V-SOL, C-Data, UTStarcom, FH-NET, Phyhome)</div>
+      </div>
+      <div class="topbar-right">
+        <div class="hint">Defaults: bandwidth interpreted per-vendor (C-Data uses Mbps)</div>
+        <button id="modeToggle">🌞 Light</button>
+      </div>
+    </header>
+
+    <div class="card grid">
+      <!-- left: inputs -->
+      <div style="padding:18px;">
+        <h3 style="margin-top:0;margin-bottom:12px">Inputs</h3>
+
+        <div class="field">
+          <label>OLT Type</label>
+          <select id="oltType">
+            <option>C-Data GPON 16-PON</option>
+            <option>V-SOL GPON</option>
+            <option>UTStarcom</option>
+            <option>C-Data GPON 8-PON</option>
+            <option>FH-NET</option>
+            <option>Phyhome</option>
+          </select>
+        </div>
+
+        <div class="row3">
+          <div class="field">
+            <label>Slot</label>
+            <input id="slot" type="number" placeholder="e.g. 1" />
+          </div>
+          <div class="field">
+            <label>PON (port)</label>
+            <input id="pon" type="number" placeholder="e.g. 15" />
+          </div>
+          <div class="field">
+            <label>ONU ID</label>
+            <input id="onuId" type="number" placeholder="e.g. 15" />
+          </div>
+        </div>
+
+        <div class="row3">
+          <div class="field">
+            <label>VLAN</label>
+            <input id="vlan" type="number" placeholder="e.g. 529" />
+          </div>
+          <div class="field">
+            <label>Line profile</label>
+            <input id="lineProfile" type="number" placeholder="e.g. 529" />
+          </div>
+          <div class="field">
+            <label>GEM / Srv profile ID</label>
+            <input id="gemId" type="number" placeholder="e.g. 1 or 4" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>ONU MAC / Serial (SN)</label>
+          <input id="onuMac" type="text" placeholder="e.g. GPON00B5A116 or E067B33E1506 or VSOLC8DBB52F" />
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Bandwidth rate</label>
+            <select id="rate">
+              <option value="100/100">100/100</option>
+              <option value="160/160">160/160</option>
+              <option value="210/210">210/210</option>
+              <option value="custom">Custom (Mbps)</option>
+            </select>
+            <div id="customRow" style="display:none;margin-top:8px;gap:8px;display:grid;grid-template-columns:1fr 1fr;">
+              <input id="customUp" placeholder="Up Mbps" type="number" />
+              <input id="customDown" placeholder="Down Mbps" type="number" />
+            </div>
+            <div class="hint" style="margin-top:8px">Note: For C-Data templates, <b>ont port car</b> uses raw Mbps values (e.g. 100). Other vendors use Kbps (100 → 102400).</div>
+          </div>
+          <div class="field">
+            <label>ONU Ports</label>
+            <select id="onuPorts">
+              <option value="1">1 port ONU</option>
+              <option value="4">4 port ONU</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row-bottom">
+          <div class="controls">
+            <button class="btn-primary" id="genBtn">Generate</button>
+            <button class="btn-ghost" id="copyBtn">Copy</button>
+            <button class="btn-danger" id="clearBtn">Clear</button>
+          </div>
+          <div class="hint">Fill required fields then click <b>Generate</b></div>
+        </div>
+      </div>
+
+      <!-- right: output -->
+      <div style="padding:18px;border-left:1px solid rgba(255,255,255,0.03)">
+        <h3 style="margin-top:0;margin-bottom:12px">Generated Script</h3>
+        <textarea id="out" placeholder="Your generated script will appear here..." spellcheck="false"></textarea>
+      </div>
+    </div>
+
+    <footer>
+      Built for quick OLT provisioning — matches common vendor templates. Want extra templates or export options? <a class="link" href="#">Tell me</a>.
+    </footer>
+  </div>
+
+<script>
+  // shortcuts
+  const $ = id => document.getElementById(id);
+
+  // show/hide custom rate inputs
+  $('rate').addEventListener('change', ()=>{
+    $('customRow').style.display = $('rate').value === 'custom' ? 'grid' : 'none';
+  });
+
+  // mode toggle
+  const modeBtn = $('modeToggle');
+  modeBtn.addEventListener('click', ()=>{
+    document.body.classList.toggle('light');
+    modeBtn.textContent = document.body.classList.contains('light') ? '🌙 Dark' : '🌞 Light';
+  });
+
+  // helpers
+  function mbpsToKbps(m){ return Math.round(Number(m) * 1024); } // as used in examples (100 -> 102400)
+  function parseRate(){
+    const v = $('rate').value;
+    if(v !== 'custom'){
+      const [u,d] = v.split('/').map(Number);
+      return {up: u, down: d};
+    }
+    const up = Number($('customUp').value || 0);
+    const down = Number($('customDown').value || 0);
+    return {up, down};
+  }
+
+  // main generation logic (templates mirror your examples)
+  function generateScript(){
+    const olt = $('oltType').value.trim();
+    const slot = Number($('slot').value || 0);
+    const pon = Number($('pon').value || 0);
+    const onu = Number($('onuId').value || 0);
+    const vlan = Number($('vlan').value || 0);
+    const lineProfile = Number($('lineProfile').value || 0);
+    const gemId = Number($('gemId').value || 0);
+    const onuMac = $('onuMac').value.trim();
+    const ports = Number($('onuPorts').value || 1);
+    const {up, down} = parseRate();
+
+    // validate minimal
+    if(!olt || !pon || !onu || !vlan || !onuMac){
+      $('out').value = '❌ Please fill: OLT Type, PON, ONU ID, VLAN and ONU MAC/SN.';
+      return;
+    }
+
+    // determine per-vendor units: C-Data uses Mbps in ont port car; others use Kbps
+    const isCdata = olt.toLowerCase().includes('c-data');
+    const upK = mbpsToKbps(up);
+    const downK = mbpsToKbps(down);
+
+    let script = '';
+
+    if(olt === 'V-SOL GPON'){
+      if(ports === 1){
+        script = 
+`onu add ${onu} profile 1_port_onu sn ${onuMac}
+onu ${onu} profile line id ${lineProfile}
+onu ${onu} portvlan eth 1 mode tag vlan ${vlan} pri 0
+onu ${onu} eth 1 loopdetect disable
+onu ${onu} eth 1 upstream-rate-limit cir ${upK} pir ${upK}
+onu ${onu} eth 1 downstream-rate-limit cir ${downK} pir ${downK}`;
+      } else {
+        script =
+`onu add ${onu} profile 4_port_onu sn ${onuMac}
+onu ${onu} profile line id ${lineProfile}
+onu ${onu} portvlan eth 1 mode tag vlan ${vlan} pri 0
+onu ${onu} eth 1 loopdetect disable
+onu ${onu} eth 2 state disable
+onu ${onu} eth 3 state disable
+onu ${onu} eth 4 state disable
+onu ${onu} eth 1 upstream-rate-limit cir ${upK} pir ${upK}
+onu ${onu} eth 1 downstream-rate-limit cir ${downK} pir ${downK}`;
+      }
+    }
+    else if(olt === 'C-Data GPON 16-PON'){
+      // in examples: ont add <pon> <onu> ... they used PON twice (first two numbers). We'll follow pattern using pon as slot/port index.
+      if(ports === 1){
+        script =
+`ont add ${pon} ${onu} sn-auth ${onuMac} ont-lineprofile-id ${lineProfile} ont-srvprofile-id ${gemId}
+ont port native-vlan ${pon} ${onu} eth 1 vlan ${vlan}
+ont port car ${pon} ${onu} eth 1 inbound ${up} outbound ${down}
+exit
+service-port autoindex vlan ${vlan} gpon 0/0 port ${pon} ont ${onu} gemport 1 multi-service user-vlan ${vlan} tag-action transparent`;
+      } else {
+        script =
+`ont add ${pon} ${onu} sn-auth ${onuMac} ont-lineprofile-id ${lineProfile} ont-srvprofile-id ${gemId}
+ont port native-vlan ${pon} ${onu} eth 1 vlan ${vlan}
+ont port attribute ${pon} ${onu} eth 2 operational-state off
+ont port attribute ${pon} ${onu} eth 3 operational-state off
+ont port attribute ${pon} ${onu} eth 4 operational-state off
+ont port car ${pon} ${onu} eth 1 inbound ${up} outbound ${down}
+exit
+service-port autoindex vlan ${vlan} gpon 0/0 port ${pon} ont ${onu} gemport 1 multi-service user-vlan ${vlan} tag-action transparent`;
+      }
+    }
+    else if(olt === 'C-Data GPON 8-PON'){
+      if(ports === 1){
+        script =
+`ont add ${slot} ${onu} sn-auth ${onuMac} ont-lineprofile-id ${lineProfile} ont-srvprofile-id ${gemId}
+ont port native-vlan ${slot} ${onu} eth 1 vlan ${vlan}
+ont port car ${slot} ${onu} eth 1 inbound ${up} outbound ${down}
+exit`;
+      } else {
+        script =
+`ont add ${slot} ${onu} sn-auth ${onuMac} ont-lineprofile-id ${lineProfile} ont-srvprofile-id ${gemId}
+ont port native-vlan ${slot} ${onu} eth 1 vlan ${vlan}
+ont port attribute ${slot} ${onu} eth 2 operational-state off
+ont port attribute ${slot} ${onu} eth 3 operational-state off
+ont port attribute ${slot} ${onu} eth 4 operational-state off
+ont port car ${slot} ${onu} eth 1 inbound ${up} outbound ${down}
+exit`;
+      }
+    }
+    else if(olt === 'UTStarcom'){
+      // UTStarcom example used interface epon-olt 0/1 and onu 15 etc. Use slot or pon as appropriate.
+      const interfacePort = slot || pon || 1;
+      script =
+`interface epon-olt 0/${interfacePort}
+onu ${onu}
+dba-sla mac ${onuMac}
+dba-sla mac-limit 10
+remote-mgmt eth 1 vlan-mode tag ${vlan} 8100
+policing upstream pir-mark-no-drop
+policing downstream pir-mark-no-drop
+shaping conform-to-pir
+dba-sla upstream maximum-bandwidth ${upK} Kbps
+dba-sla upstream max-burst 512 Kbps
+dba-sla downstream maximum-bandwidth ${downK} Kbps
+dba-sla downstream max-burst 512 Kbps
+remote-mgmt eth 2 admin disable
+remote-mgmt eth 3 admin disable
+remote-mgmt eth 4 admin disable
+exit
+exit
+exit
+configure management
+save`;
+    }
+    else if(olt === 'FH-NET'){
+      // FH-NET example used onu 0/1/15
+      const slotForFH = slot || pon || 1;
+      script =
+`onu 0/${slotForFH}/${onu}
+interface ethernet 0/1
+no onu-shutdown
+onu-vlan-mode tag vlan ${vlan}
+exit
+interface ethernet 0/2
+onu-shutdown
+exit
+interface ethernet 0/3
+onu-shutdown
+exit
+interface ethernet 0/4
+onu-shutdown
+exit
+onu-bandwidth upstream fir 0 cir 0 pir ${upK}
+onu-bandwidth downstream fir 0 cir 0 pir ${downK}
+onu-bandwidth shaper pir
+exit
+exit
+copy running-config startup-config`;
+    }
+    else if(olt === 'Phyhome'){
+      const slotForPhy = slot || pon || 1;
+      // follow example structure; the bandwidth numbers in example looked different — include upK and down params where appropriate
+      script =
+`service
+configure
+service number 0 ${slotForPhy} ${onu} 1 1
+customer-vlan 0 ${slotForPhy} ${onu} 1 1 tag 7 33024 ${vlan}
+apply fe-service-compress-pkt 0 ${slotForPhy} ${onu}
+onu-port-attribute 0 ${slotForPhy} ${onu} 2 disable
+onu-port-attribute 0 ${slotForPhy} ${onu} 3 disable
+onu-port-attribute 0 ${slotForPhy} ${onu} 4 disable
+port-policing-config 0 ${slotForPhy} ${onu} 1 up-state enable up-parameters 99999 16384 ${upK} down-state enable down-parameters 99999 30720
+exit
+system
+configure
+max-mac-counter 0 ${slotForPhy} ${onu} 1 10
+exit
+exit
+save`;
+    }
+    else {
+      script = '❌ Unknown OLT type';
+    }
+
+    $('out').value = script;
+  }
+
+  // events
+  $('genBtn').addEventListener('click', generateScript);
+
+  $('copyBtn').addEventListener('click', ()=>{
+    const ta = $('out');
+    ta.select();
+    try {
+      document.execCommand('copy');
+      alert('Copied to clipboard');
+    } catch(e){
+      alert('Copy failed — select and Ctrl+C');
+    }
+  });
+
+  $('clearBtn').addEventListener('click', ()=>{
+    ['slot','pon','onuId','vlan','lineProfile','gemId','onuMac','customUp','customDown'].forEach(id=>{
+      const el = $(id); if(el) el.value = '';
+    });
+    $('rate').value = '100/100';
+    $('onuPorts').value = '1';
+    $('out').value = '';
+    $('customRow').style.display = 'none';
+  });
+
+  // init
+  $('slot').value = 1;
+  $('pon').value = 15;
+  $('onuId').value = 15;
+  $('vlan').value = 529;
+  $('lineProfile').value = 529;
+  $('gemId').value = 1;
+  $('rate').value = '100/100';
+  $('onuPorts').value = '1';
+</script>
+</body>
+</html>
